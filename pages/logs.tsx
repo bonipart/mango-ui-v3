@@ -6,11 +6,17 @@ import LinkButton from '../components/Button'
 /* import abbreviateAddress from "../utils"; */
 import { Connection, PublicKey } from '@solana/web3.js'
 import Loading from '../components/Loading'
-import {MangoAccount, MangoAccountLayout} from '@blockworks-foundation/mango-client'
+import {
+  MangoAccount,
+  MangoAccountLayout,
+} from '@blockworks-foundation/mango-client'
 
 const MANGO = new PublicKey('mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68')
 const SYSTEM = new PublicKey('11111111111111111111111111111111')
 
+type MarginAccount = {
+  mango_account: string
+}
 const getAccountInfo = async (pk: PublicKey) => {
   const ankrEndpoint = 'https://rpc.ankr.com/solana'
   const connection = new Connection(ankrEndpoint, 'confirmed')
@@ -56,8 +62,8 @@ const getMarginAccounts = async (address: string): Promise<string[]> => {
 
 const validateAddress = (address: string): boolean => {
   try {
-    let pubKey = new PublicKey(address)
-    let isValid = PublicKey.isOnCurve(pubKey)
+    const pubKey = new PublicKey(address)
+    const isValid = PublicKey.isOnCurve(pubKey)
     return isValid
   } catch {
     return false
@@ -65,11 +71,11 @@ const validateAddress = (address: string): boolean => {
 }
 
 const shortenAddress = (address: string) => {
-    const head = address.slice(0,5);
-    const tail = address.slice(-5,);
-    const result = head + "..." + tail;
+  const head = address.slice(0, 5)
+  const tail = address.slice(-5)
+  const result = head + '...' + tail
 
-    return result
+  return result
 }
 
 const ArrowDownTrayIcon = (): JSX.Element => {
@@ -190,9 +196,9 @@ export default function Logs() {
     })
   }, [address, JSON.stringify(marginAccounts)])
 
-  const clearAddress = () => {
-    setAddress('')
-  }
+  // const clearAddress = () => {
+  //     setAddress('')
+  // }
 
   return (
     <div className="grid-rows-10 grid min-h-screen pt-6">
@@ -212,26 +218,48 @@ export default function Logs() {
         <div className="flex-1">
           <div className="flex justify-center">
             <div className="w-4/5 p-2 md:w-3/4 md:px-0  xl:w-1/3">
-
-              {isValidAddress && marginAccounts.length < 1 ?
-                                                         {isFetching ?
-                                                          <div className="flex justify-center">
-                                                           <Loading className="m-10 h-10 w-10" />
-                                                          </div>
-                                                        : null}
-              : <div>
-                <div className="py-4 ">
-                  Found {marginAccounts.length} logs for {shortenAddress(address)}
+              {isValidAddress && marginAccounts.length < 1 ? (
+                <div>
+                  {isFetching ? (
+                    <div className="flex justify-center">
+                      <Loading className="m-10 h-10 w-10" />
+                    </div>
+                  ) : null}
                 </div>
-                <div className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">
-                { marginAccounts.map(account => {
-                   return <LogDLBtn key={account} address={account} />
-                  })}
-
-               </div>
+              ) : (
+                <div>
+                  <div className="py-4 ">
+                    Found {marginAccounts.length} logs for{' '}
+                    {shortenAddress(address)}
+                  </div>
+                  <div className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">
+                    {marginAccounts.map((account) => {
+                      return <LogDLBtn key={account} address={account} />
+                    })}
+                  </div>
                 </div>
-              }
+              )}
+              {/*{(isValidAddress && marginAccounts.length < 1) ?*/}
+              {/*    {*/}
+              {/*    isFetching ?*/}
+              {/*            <div className="flex justify-center">*/}
+              {/*                <Loading className="m-10 h-10 w-10"/>*/}
+              {/*            </div>*/}
+              {/*            : null*/}
+              {/*    }*/}
+              {/*    : <div>*/}
+              {/*        <div className="py-4 ">*/}
+              {/*            Found {marginAccounts.length} logs for {shortenAddress(address)}*/}
+              {/*        </div>*/}
+              {/*        <div*/}
+              {/*            className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">*/}
+              {/*            {marginAccounts.map(account => {*/}
+              {/*                return <LogDLBtn key={account} address={account}/>*/}
+              {/*            })}*/}
 
+              {/*        </div>*/}
+              {/*    </div>*/}
+              {/*}*/}
 
               {/* {isValidAddress && !isFetching ?
 
@@ -243,11 +271,10 @@ export default function Logs() {
                   ))}
                   </div>
                 */}
-
             </div>
           </div>
         </div>
       </div>
-      </div>
+    </div>
   )
 }
