@@ -216,6 +216,10 @@ export default function Logs() {
         </div>
 
         <div className="flex-1">
+          <div>
+            <div>isValidAddress = {JSON.stringify(isValidAddress)}</div>
+            <div>marginAccounts.length = {marginAccounts.length}</div>
+          </div>
           <div className="flex justify-center">
             <div className="w-4/5 p-2 md:w-3/4 md:px-0  xl:w-1/3">
               {isValidAddress && marginAccounts.length < 1 ? (
@@ -228,15 +232,19 @@ export default function Logs() {
                 </div>
               ) : (
                 <div>
-                  <div className="py-4 ">
-                    Found {marginAccounts.length} logs for{' '}
-                    {shortenAddress(address)}
-                  </div>
-                  <div className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">
-                    {marginAccounts.map((account) => {
-                      return <LogDLBtn key={account} address={account} />
-                    })}
-                  </div>
+                  {isValidAddress ? (
+                    <div>
+                      <div className="py-4">
+                        Found {marginAccounts.length} logs for{' '}
+                        {shortenAddress(address)}
+                      </div>
+                      <div className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">
+                        {marginAccounts.map((account) => {
+                          return <LogDLBtn key={account} address={account} />
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
               {/*{(isValidAddress && marginAccounts.length < 1) ?*/}
