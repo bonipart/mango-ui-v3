@@ -3,7 +3,7 @@ import Input from '../components/Input'
 /* import Label from "../components/Input"; */
 /* import Button from "../components/Button" */
 import LinkButton from '../components/Button'
-/* import abbreviateAddress from "../utils"; */
+/* import abbreviateAddress from '../utils' */
 import { Connection, PublicKey } from '@solana/web3.js'
 import Loading from '../components/Loading'
 import {
@@ -14,9 +14,10 @@ import {
 const MANGO = new PublicKey('mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68')
 const SYSTEM = new PublicKey('11111111111111111111111111111111')
 
-type MarginAccount = {
-  mango_account: string
-}
+/* type MarginAccount = {
+ *   mango_account: string
+ * } */
+
 const getAccountInfo = async (pk: PublicKey) => {
   const ankrEndpoint = 'https://rpc.ankr.com/solana'
   const connection = new Connection(ankrEndpoint, 'confirmed')
@@ -29,7 +30,8 @@ const fetchAccounts = async (address: string) => {
   const walletAccountsEndpoint =
     'https://mango-transaction-log.herokuapp.com/v3/user-data/wallet-mango-accounts'
   const response = await fetch(walletAccountsEndpoint + '?wallet-pk=' + address)
-  const data: [MarginAccount] = await response.json()
+  /* const data: [MarginAccount] = await response.json() */
+  const data = await response.json()
 
   if (!Array.isArray(data)) return []
 
@@ -38,33 +40,49 @@ const fetchAccounts = async (address: string) => {
   return accounts
 }
 
-const getMarginAccounts = async (address: string): Promise<string[]> => {
+const getMangoAccounts = async (address: string): Promise<string[]> => {
   const pk = new PublicKey(address)
   const accountInfo = await getAccountInfo(pk)
   const owner = accountInfo?.owner
 
   if (owner?.equals(SYSTEM)) {
-    const marginAccounts = await fetchAccounts(address)
+    const mangoAccounts = await fetchAccounts(address)
 
-    return marginAccounts
+    return mangoAccounts
   } else if (owner?.equals(MANGO)) {
     const data = accountInfo?.data
-    const layout = MangoAccountLayout.decode(data)
+
+    let layout
+    try {
+      layout = MangoAccountLayout.decode(data)
+    } catch {
+      return []
+    }
+
     const mangoAccount = new MangoAccount(pk, layout)
     const owner = mangoAccount.owner
-    const marginAccounts = await fetchAccounts(owner.toString())
+    const mangoAccounts = await fetchAccounts(owner.toString())
 
-    return marginAccounts
+    return mangoAccounts
   } else {
     return []
   }
 }
 
+/* const validateAddress = (address: string): boolean => {
+ *   try {
+ *     const pubKey = new PublicKey(address)
+ *     const isValid = PublicKey.isOnCurve(pubKey)
+ *     return isValid
+ *   } catch {
+ *     return false
+ *   }
+ * } */
+
 const validateAddress = (address: string): boolean => {
   try {
-    const pubKey = new PublicKey(address)
-    const isValid = PublicKey.isOnCurve(pubKey)
-    return isValid
+    new PublicKey(address)
+    return true
   } catch {
     return false
   }
@@ -124,11 +142,13 @@ const ClearAddressBtn = ({ onClick }: ClearAddressBtnProps): JSX.Element => {
 
 type AddressInputProps = {
   address: string
+  isValid: boolean
   setAddress: (v: string) => void
 }
 
 const AddressInput = ({
   address,
+  isValid,
   setAddress,
 }: AddressInputProps): JSX.Element => {
   return (
@@ -136,6 +156,7 @@ const AddressInput = ({
       type={'string'}
       onChange={(e) => setAddress(e.target.value)}
       value={address}
+      disabled={isValid}
       suffix={
         address.length > 0 ? (
           <ClearAddressBtn
@@ -156,6 +177,8 @@ type LogsDLBtnProps = {
 const LogDLBtn = ({ address }: LogsDLBtnProps): JSX.Element => {
   const shortAddress = address.slice(0, 5) + '...' + address.slice(-5)
 
+  console.log('Found: ', address)
+
   return (
     <LinkButton className="w-full">
       <div className="flex items-center">
@@ -168,7 +191,7 @@ const LogDLBtn = ({ address }: LogsDLBtnProps): JSX.Element => {
 
 export default function Logs() {
   const [address, setAddress] = useState('')
-  const [marginAccounts, setMarginAccounts] = useState<string[]>([])
+  const [mangoAccounts, setMarginAccounts] = useState<string[]>([])
   const [isValidAddress, setIsValidAddress] = useState(false)
   const [isFetching, setIsFetching] = useState(false)
   const prevAddress = useRef('')
@@ -178,8 +201,10 @@ export default function Logs() {
 
     if (!isValid) {
       prevAddress.current = ''
+      setIsFetching(false)
       setIsValidAddress(false)
       setMarginAccounts([])
+
       return
     }
 
@@ -190,15 +215,11 @@ export default function Logs() {
     prevAddress.current = address
     setIsValidAddress(true)
     setIsFetching(true)
-    getMarginAccounts(address).then((accounts) => {
+    getMangoAccounts(address).then((accounts) => {
       setIsFetching(false)
       setMarginAccounts(accounts)
     })
-  }, [address, JSON.stringify(marginAccounts)])
-
-  // const clearAddress = () => {
-  //     setAddress('')
-  // }
+  }, [address, JSON.stringify(mangoAccounts)])
 
   return (
     <div className="grid-rows-10 grid min-h-screen pt-6">
@@ -206,79 +227,43 @@ export default function Logs() {
         <div className="flex flex-col">
           <h1>Logs</h1>
           <div className="flex flex-col items-center">
-            {!isValidAddress ? (
+            {!isValidAddress && (
               <p className="">Enter a valid address to show available logs.</p>
-            ) : null}
+            )}
             <div className="w-full md:w-1/2 xl:w-1/3">
-              <AddressInput address={address} setAddress={setAddress} />
+              <AddressInput
+                address={address}
+                isValid={isValidAddress}
+                setAddress={setAddress}
+              />
             </div>
+            <p className="py-0">
+              Found {mangoAccounts.length} logs for {shortenAddress(address)}:
+            </p>
           </div>
         </div>
 
         <div className="flex-1">
-          <div>
-            <div>isValidAddress = {JSON.stringify(isValidAddress)}</div>
-            <div>marginAccounts.length = {marginAccounts.length}</div>
-          </div>
           <div className="flex justify-center">
             <div className="w-4/5 p-2 md:w-3/4 md:px-0  xl:w-1/3">
-              {isValidAddress && marginAccounts.length < 1 ? (
-                <div>
-                  {isFetching ? (
-                    <div className="flex justify-center">
-                      <Loading className="m-10 h-10 w-10" />
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <div>
-                  {isValidAddress ? (
-                    <div>
-                      <div className="py-4">
-                        Found {marginAccounts.length} logs for{' '}
-                        {shortenAddress(address)}
-                      </div>
-                      <div className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">
-                        {marginAccounts.map((account) => {
-                          return <LogDLBtn key={account} address={account} />
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
+              {isFetching && (
+                <div className="flex justify-center">
+                  <Loading className="m-10 h-10 w-10" />
                 </div>
               )}
-              {/*{(isValidAddress && marginAccounts.length < 1) ?*/}
-              {/*    {*/}
-              {/*    isFetching ?*/}
-              {/*            <div className="flex justify-center">*/}
-              {/*                <Loading className="m-10 h-10 w-10"/>*/}
-              {/*            </div>*/}
-              {/*            : null*/}
-              {/*    }*/}
-              {/*    : <div>*/}
-              {/*        <div className="py-4 ">*/}
-              {/*            Found {marginAccounts.length} logs for {shortenAddress(address)}*/}
-              {/*        </div>*/}
-              {/*        <div*/}
-              {/*            className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">*/}
-              {/*            {marginAccounts.map(account => {*/}
-              {/*                return <LogDLBtn key={account} address={account}/>*/}
-              {/*            })}*/}
-
-              {/*        </div>*/}
-              {/*    </div>*/}
-              {/*}*/}
-
-              {/* {isValidAddress && !isFetching ?
-
-                  : null
-                  }
+              {isValidAddress && !isFetching ? (
+                <div>
+                  <p className="py-0">
+                    Found {mangoAccounts.length} logs for{' '}
+                    {shortenAddress(address)}:
+                  </p>
                   <div className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">
-                  {addys.map((addy) => (
-                  <LogDLBtn key={addy} address={addy} />
-                  ))}
+                    {mangoAccounts.map((account) => {
+                      return <LogDLBtn key={account} address={account} />
+                    })}
                   </div>
-                */}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
