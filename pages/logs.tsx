@@ -217,11 +217,9 @@ export default function Logs() {
       <div className="flex flex-col">
         <div className="flex flex-col">
           <h1>Logs</h1>
-          <div className="flex flex-col items-center pt-2">
+          <div className="flex flex-col items-center pt-4">
             {!isValidAddress && (
-              <p className="py-2">
-                Enter a valid address to show available logs.
-              </p>
+              <p>Enter a valid address to show available logs.</p>
             )}
             <div className="w-full md:w-[70%] xl:w-1/3">
               <AddressInput
@@ -230,7 +228,7 @@ export default function Logs() {
                 setAddress={setAddress}
               />
               {isValidAddress && !isFetching && (
-                <p className="mt-8 self-start">
+                <p className="mt-4 self-start">
                   Found {mangoAccounts.length} logs for{' '}
                   {shortenAddress(address)}:
                 </p>
