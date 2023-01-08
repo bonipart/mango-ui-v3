@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Input from '../components/Input'
-/* import Label from "../components/Input"; */
-/* import Button from "../components/Button" */
 import LinkButton from '../components/Button'
 /* import abbreviateAddress from '../utils' */
-import { Connection, PublicKey } from '@solana/web3.js'
+import { AccountInfo, Connection, PublicKey } from '@solana/web3.js'
 import Loading from '../components/Loading'
 import {
   MangoAccount,
@@ -14,14 +12,20 @@ import {
 const MANGO = new PublicKey('mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68')
 const SYSTEM = new PublicKey('11111111111111111111111111111111')
 
-/* type MarginAccount = {
- *   mango_account: string
- * } */
-
-const getAccountInfo = async (pk: PublicKey) => {
+const getAccountInfo = async (
+  pk: PublicKey
+): Promise<AccountInfo<Buffer> | null> => {
   const ankrEndpoint = 'https://rpc.ankr.com/solana'
   const connection = new Connection(ankrEndpoint, 'confirmed')
-  const accountInfo = await connection.getAccountInfo(pk, 'confirmed')
+
+  let accountInfo
+  try {
+    accountInfo = connection.getAccountInfo(pk, 'confirmed')
+  } catch (e) {
+    // TODO: Display error message
+    console.log('Failed to fetch account info: ', e)
+    return null
+  }
 
   return accountInfo
 }
@@ -30,7 +34,6 @@ const fetchAccounts = async (address: string) => {
   const walletAccountsEndpoint =
     'https://mango-transaction-log.herokuapp.com/v3/user-data/wallet-mango-accounts'
   const response = await fetch(walletAccountsEndpoint + '?wallet-pk=' + address)
-  /* const data: [MarginAccount] = await response.json() */
   const data = await response.json()
 
   if (!Array.isArray(data)) return []
@@ -68,16 +71,6 @@ const getMangoAccounts = async (address: string): Promise<string[]> => {
     return []
   }
 }
-
-/* const validateAddress = (address: string): boolean => {
- *   try {
- *     const pubKey = new PublicKey(address)
- *     const isValid = PublicKey.isOnCurve(pubKey)
- *     return isValid
- *   } catch {
- *     return false
- *   }
- * } */
 
 const validateAddress = (address: string): boolean => {
   try {
@@ -177,8 +170,6 @@ type LogsDLBtnProps = {
 const LogDLBtn = ({ address }: LogsDLBtnProps): JSX.Element => {
   const shortAddress = address.slice(0, 5) + '...' + address.slice(-5)
 
-  console.log('Found: ', address)
-
   return (
     <LinkButton className="w-full">
       <div className="flex items-center">
@@ -226,44 +217,45 @@ export default function Logs() {
       <div className="flex flex-col">
         <div className="flex flex-col">
           <h1>Logs</h1>
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center pt-2">
             {!isValidAddress && (
-              <p className="">Enter a valid address to show available logs.</p>
+              <p className="py-2">
+                Enter a valid address to show available logs.
+              </p>
             )}
-            <div className="w-full md:w-1/2 xl:w-1/3">
+            <div className="w-full md:w-[70%] xl:w-1/3">
               <AddressInput
                 address={address}
                 isValid={isValidAddress}
                 setAddress={setAddress}
               />
+              {isValidAddress && !isFetching && (
+                <p className="mt-8 self-start">
+                  Found {mangoAccounts.length} logs for{' '}
+                  {shortenAddress(address)}:
+                </p>
+              )}
             </div>
-            <p className="py-0">
-              Found {mangoAccounts.length} logs for {shortenAddress(address)}:
-            </p>
           </div>
         </div>
 
-        <div className="flex-1">
+        <div className="mt-2 flex-1">
           <div className="flex justify-center">
-            <div className="w-4/5 p-2 md:w-3/4 md:px-0  xl:w-1/3">
+            <div className="w-[70%] md:px-0 xl:w-1/3">
               {isFetching && (
                 <div className="flex justify-center">
                   <Loading className="m-10 h-10 w-10" />
                 </div>
               )}
-              {isValidAddress && !isFetching ? (
+              {isValidAddress && !isFetching && (
                 <div>
-                  <p className="py-0">
-                    Found {mangoAccounts.length} logs for{' '}
-                    {shortenAddress(address)}:
-                  </p>
                   <div className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">
                     {mangoAccounts.map((account) => {
                       return <LogDLBtn key={account} address={account} />
                     })}
                   </div>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
