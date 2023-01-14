@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { isValidSolanaAddress } from '../utils'
 import Input from '../components/Input'
 import LinkButton from '../components/Button'
 import Loading from '../components/Loading'
@@ -67,15 +68,6 @@ const getMangoAccounts = async (address: string): Promise<string[]> => {
     return mangoAccounts
   } else {
     return []
-  }
-}
-
-const isSolanaAddress = (address: string): boolean => {
-  try {
-    new PublicKey(address)
-    return true
-  } catch {
-    return false
   }
 }
 
@@ -149,8 +141,6 @@ const AddressInput = ({
     }
   }, [])
 
-  console.log('inputRef = ', input)
-
   return (
     <Input
       ref={input}
@@ -199,7 +189,7 @@ export default function Logs() {
   const prevAddress = useRef('')
 
   useEffect(() => {
-    const isValid = isSolanaAddress(address)
+    const isValid = isValidSolanaAddress(address)
 
     if (!isValid) {
       prevAddress.current = ''
@@ -238,13 +228,6 @@ export default function Logs() {
                 isValid={isValidAddress}
                 setAddress={setAddress}
               />
-              {isValidAddress && !isFetching && (
-                <p className="mt-6 self-start">
-                  Found{' '}
-                  <span className="font-bold">{mangoAccounts.length}</span> logs
-                  for {shortenAddress(address)}:
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -258,13 +241,20 @@ export default function Logs() {
                 </div>
               )}
               {isValidAddress && !isFetching && (
-                <div>
-                  <div className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">
-                    {mangoAccounts.map((account) => {
-                      return <LogDLBtn key={account} address={account} />
-                    })}
+                <>
+                  <p className="mt-6 self-start">
+                    Found{' '}
+                    <span className="font-bold">{mangoAccounts.length}</span>{' '}
+                    logs for {shortenAddress(address)}:
+                  </p>
+                  <div>
+                    <div className="grid grid-cols-1 justify-items-center gap-x-2 gap-y-2 md:grid-cols-2 ">
+                      {mangoAccounts.map((account) => {
+                        return <LogDLBtn key={account} address={account} />
+                      })}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           </div>
