@@ -1,39 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import Input from '../components/Input'
 import LinkButton from '../components/Button'
-/* import abbreviateAddress from '../utils' */
-import { AccountInfo, Connection, PublicKey } from '@solana/web3.js'
 import Loading from '../components/Loading'
+import { AccountInfo, Connection, PublicKey } from '@solana/web3.js'
 import {
   MangoAccount,
   MangoAccountLayout,
 } from '@blockworks-foundation/mango-client'
 
-const MANGO = new PublicKey('mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68')
-const SYSTEM = new PublicKey('11111111111111111111111111111111')
+const MANGO_V3 = new PublicKey('mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68')
+const SYSTEM_PROGRAM = new PublicKey('11111111111111111111111111111111')
 
-const getAccountInfo = async (
-  pk: PublicKey
-): Promise<AccountInfo<Buffer> | null> => {
-  const ankrEndpoint = 'https://rpc.ankr.com/solana'
-  const connection = new Connection(ankrEndpoint, 'confirmed')
-
-  let accountInfo
-  try {
-    accountInfo = connection.getAccountInfo(pk, 'confirmed')
-  } catch (e) {
-    // TODO: Display error message
-    console.log('Failed to fetch account info: ', e)
-    return null
-  }
-
-  return accountInfo
-}
-
-const fetchAccounts = async (address: string) => {
-  const walletAccountsEndpoint =
+const fetchAccounts = async (address: string): Promise<string[]> => {
+  const walletAccountsBaseURL =
     'https://mango-transaction-log.herokuapp.com/v3/user-data/wallet-mango-accounts'
-  const response = await fetch(walletAccountsEndpoint + '?wallet-pk=' + address)
+  const response = await fetch(walletAccountsBaseURL + '?wallet-pk=' + address)
   const data = await response.json()
 
   if (!Array.isArray(data)) return []
@@ -43,16 +24,33 @@ const fetchAccounts = async (address: string) => {
   return accounts
 }
 
+const getAccountInfo = async (
+  pubKey: PublicKey
+): Promise<AccountInfo<Buffer> | null> => {
+  const ankrEndpoint = 'https://rpc.ankr.com/solana'
+  const connection = new Connection(ankrEndpoint, 'confirmed')
+
+  let accountInfo
+  try {
+    accountInfo = connection.getAccountInfo(pubKey, 'confirmed')
+  } catch (e) {
+    // TODO: Display error message
+    return null
+  }
+
+  return accountInfo
+}
+
 const getMangoAccounts = async (address: string): Promise<string[]> => {
-  const pk = new PublicKey(address)
-  const accountInfo = await getAccountInfo(pk)
+  const pubKey = new PublicKey(address)
+  const accountInfo = await getAccountInfo(pubKey)
   const owner = accountInfo?.owner
 
-  if (owner?.equals(SYSTEM)) {
+  if (owner?.equals(SYSTEM_PROGRAM)) {
     const mangoAccounts = await fetchAccounts(address)
 
     return mangoAccounts
-  } else if (owner?.equals(MANGO)) {
+  } else if (owner?.equals(MANGO_V3)) {
     const data = accountInfo?.data
 
     let layout
@@ -62,7 +60,7 @@ const getMangoAccounts = async (address: string): Promise<string[]> => {
       return []
     }
 
-    const mangoAccount = new MangoAccount(pk, layout)
+    const mangoAccount = new MangoAccount(pubKey, layout)
     const owner = mangoAccount.owner
     const mangoAccounts = await fetchAccounts(owner.toString())
 
@@ -72,7 +70,7 @@ const getMangoAccounts = async (address: string): Promise<string[]> => {
   }
 }
 
-const validateAddress = (address: string): boolean => {
+const isSolanaAddress = (address: string): boolean => {
   try {
     new PublicKey(address)
     return true
@@ -144,8 +142,18 @@ const AddressInput = ({
   isValid,
   setAddress,
 }: AddressInputProps): JSX.Element => {
+  const input = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (input.current) {
+      input.current.focus()
+    }
+  }, [])
+
+  console.log('inputRef = ', input)
+
   return (
     <Input
+      ref={input}
       type={'string'}
       onChange={(e) => setAddress(e.target.value)}
       value={address}
@@ -168,15 +176,18 @@ type LogsDLBtnProps = {
 }
 
 const LogDLBtn = ({ address }: LogsDLBtnProps): JSX.Element => {
-  const shortAddress = address.slice(0, 5) + '...' + address.slice(-5)
+  const shortAddress = shortenAddress(address)
+  const logURL = 'https://mango-v3.s3.amazonaws.com/' + address + '_data.zip'
 
   return (
-    <LinkButton className="w-full">
-      <div className="flex items-center">
-        <div className="flex-1 text-center">{shortAddress}</div>
-        <ArrowDownTrayIcon />
-      </div>
-    </LinkButton>
+    <a href={logURL} className="w-full">
+      <LinkButton className="w-full">
+        <div className="flex items-center">
+          <div className="flex-1 text-center">{shortAddress}</div>
+          <ArrowDownTrayIcon />
+        </div>
+      </LinkButton>
+    </a>
   )
 }
 
@@ -188,7 +199,7 @@ export default function Logs() {
   const prevAddress = useRef('')
 
   useEffect(() => {
-    const isValid = validateAddress(address)
+    const isValid = isSolanaAddress(address)
 
     if (!isValid) {
       prevAddress.current = ''
@@ -213,7 +224,7 @@ export default function Logs() {
   }, [address, JSON.stringify(mangoAccounts)])
 
   return (
-    <div className="grid-rows-10 grid min-h-screen pt-6">
+    <div className="grid-rows-10 mt-6 grid min-h-screen">
       <div className="flex flex-col">
         <div className="flex flex-col">
           <h1>Logs</h1>
@@ -228,9 +239,10 @@ export default function Logs() {
                 setAddress={setAddress}
               />
               {isValidAddress && !isFetching && (
-                <p className="mt-4 self-start">
-                  Found {mangoAccounts.length} logs for{' '}
-                  {shortenAddress(address)}:
+                <p className="mt-6 self-start">
+                  Found{' '}
+                  <span className="font-bold">{mangoAccounts.length}</span> logs
+                  for {shortenAddress(address)}:
                 </p>
               )}
             </div>
